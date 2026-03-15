@@ -4,7 +4,7 @@ A portfolio web application that analyses customer reviews using **Sentiment Ana
 classifying them as Positive, Negative, or Neutral and ranking products by their net sentiment score.
 
 ## 🔗 Live Demo
-> Deploy to Project to get your live Link
+> Deploy to Project to get your live [Link](https://luxury-dasik-b80dc2.netlify.app)
 
 ---
 
