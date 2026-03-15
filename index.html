@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SentiAna — Sentiment Analysis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="nav-brand">
+      <span class="brand-dot"></span>
+      SentiAna
+    </div>
+    <div class="nav-right">
+      <span class="nav-user" id="nav-user"></span>
+      <button class="btn-ghost" id="auth-btn" onclick="handleAuth()"></button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="hero-tag">Final Year Project · VADER Sentiment Analysis</div>
+    <h1 class="hero-title">
+      What do people<br>
+      <em>really think?</em>
+    </h1>
+    <p class="hero-subtitle">
+      An intelligent product review analyser that uses NLP to classify customer sentiment —
+      Positive, Negative, or Neutral — in real time.
+    </p>
+    <div class="hero-stats" id="hero-stats">
+      <div class="stat"><span id="stat-products">6</span><label>Products</label></div>
+      <div class="stat"><span id="stat-reviews">0</span><label>Reviews</label></div>
+      <div class="stat"><span id="stat-positive">0%</span><label>Positive</label></div>
+    </div>
+  </header>
+
+  <!-- HOW IT WORKS STRIP -->
+  <section class="how-strip">
+    <div class="how-item">
+      <span class="how-num">01</span>
+      <span class="how-text">User writes a product review</span>
+    </div>
+    <div class="how-arrow">→</div>
+    <div class="how-item">
+      <span class="how-num">02</span>
+      <span class="how-text">VADER lexicon scores each word</span>
+    </div>
+    <div class="how-arrow">→</div>
+    <div class="how-item">
+      <span class="how-num">03</span>
+      <span class="how-text">Compound score classifies sentiment</span>
+    </div>
+    <div class="how-arrow">→</div>
+    <div class="how-item">
+      <span class="how-num">04</span>
+      <span class="how-text">Products ranked by net score</span>
+    </div>
+  </section>
+
+  <!-- PRODUCTS GRID -->
+  <section class="products-section">
+    <div class="section-header">
+      <h2>Products <span class="section-tag">ranked by sentiment</span></h2>
+      <div class="filter-row">
+        <button class="filter-btn active" onclick="filterProducts('all', this)">All</button>
+        <button class="filter-btn" onclick="filterProducts('Smartphone', this)">Smartphones</button>
+        <button class="filter-btn" onclick="filterProducts('Laptop', this)">Laptops</button>
+      </div>
+    </div>
+    <div class="products-grid" id="products-grid">
+      <!-- Rendered by JS -->
+    </div>
+  </section>
+
+  <!-- ABOUT SECTION -->
+  <section class="about-section">
+    <div class="about-content">
+      <div class="about-text">
+        <h2>About this project</h2>
+        <p>
+          SentiAna was built using <strong>Python + Django</strong> with the <strong>VADER (Valence Aware Dictionary and Sentiment Reasoner)</strong>
+          library for backend sentiment scoring. This portfolio version runs entirely in the browser using
+          a JavaScript port of the same VADER algorithm.
+        </p>
+        <p>
+          The system handles negation (<em>"not good"</em> → negative), booster words (<em>"very amazing"</em> → higher score),
+          and returns a compound score from <strong>-1</strong> to <strong>+1</strong>.
+        </p>
+        <div class="tech-stack">
+          <span class="tech-tag">Python</span>
+          <span class="tech-tag">Django</span>
+          <span class="tech-tag">VADER NLP</span>
+          <span class="tech-tag">SQLite</span>
+          <span class="tech-tag">JavaScript</span>
+          <span class="tech-tag">HTML/CSS</span>
+        </div>
+      </div>
+      <div class="about-score-demo">
+        <h3>Score Thresholds</h3>
+        <div class="threshold">
+          <div class="threshold-bar positive-bar" style="width: 80%"></div>
+          <span class="threshold-label">≥ +0.05 <strong class="pos">Positive</strong></span>
+        </div>
+        <div class="threshold">
+          <div class="threshold-bar neutral-bar" style="width: 40%"></div>
+          <span class="threshold-label">-0.05 to +0.05 <strong class="neu">Neutral</strong></span>
+        </div>
+        <div class="threshold">
+          <div class="threshold-bar negative-bar" style="width: 70%"></div>
+          <span class="threshold-label">≤ -0.05 <strong class="neg">Negative</strong></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOGIN MODAL -->
+  <div class="modal-overlay" id="modal-overlay" onclick="closeModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <h2>Enter your name</h2>
+      <p>No password needed — just enter your name to leave reviews.</p>
+      <input type="text" id="login-input" class="modal-input" placeholder="Your name..." maxlength="30">
+      <button class="btn-primary" onclick="doLogin()">Continue →</button>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div>SentiAna · Sentiment Analysis Project</div>
+    <div class="footer-sub">Built with Python · Django · VADER NLP · JavaScript</div>
+  </footer>
+
+  <script src="js/sentiment-engine.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    let currentFilter = 'all';
+
+    function renderProducts(filter) {
+      const grid = document.getElementById('products-grid');
+      const products = window.AppData.getProductsWithScores();
+      const filtered = filter === 'all' ? products : products.filter(p => p.category === filter);
+
+      grid.innerHTML = filtered.map((p, i) => {
+        const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : '';
+        const scoreClass = p.score > 0 ? 'pos' : p.score < 0 ? 'neg' : 'neu';
+        const scorePrefix = p.score > 0 ? '+' : '';
+        const pct = p.reviewCount > 0 ? Math.round((p.positive / p.reviewCount) * 100) : 0;
+
+        return `
+          <div class="product-card ${rankClass}" onclick="window.location='product.html?id=${p.id}'" style="animation-delay:${i * 0.07}s">
+            <div class="card-rank">#${i + 1}</div>
+            <div class="card-img-wrap">
+              <img src="${p.image}" alt="${p.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/300x200/1a1a2e/7c8cf8?text=${encodeURIComponent(p.name)}'">
+            </div>
+            <div class="card-body">
+              <div class="card-category">${p.category}</div>
+              <h3 class="card-title">${p.name}</h3>
+              <p class="card-desc">${p.description.substring(0, 90)}…</p>
+              <div class="card-stats">
+                <div class="stat-pill">
+                  <span class="score ${scoreClass}">${scorePrefix}${p.score}</span>
+                  <label>Net Score</label>
+                </div>
+                <div class="stat-pill">
+                  <span>${p.reviewCount}</span>
+                  <label>Reviews</label>
+                </div>
+                <div class="stat-pill">
+                  <span class="pos">${pct}%</span>
+                  <label>Positive</label>
+                </div>
+              </div>
+              <div class="sentiment-bar-wrap">
+                <div class="sentiment-bar">
+                  <div class="bar-pos" style="width:${p.reviewCount > 0 ? (p.positive/p.reviewCount*100) : 0}%"></div>
+                  <div class="bar-neu" style="width:${p.reviewCount > 0 ? (p.neutral/p.reviewCount*100) : 0}%"></div>
+                  <div class="bar-neg" style="width:${p.reviewCount > 0 ? (p.negative/p.reviewCount*100) : 0}%"></div>
+                </div>
+                <div class="bar-legend">
+                  <span class="pos">● ${p.positive} pos</span>
+                  <span class="neu">● ${p.neutral} neu</span>
+                  <span class="neg">● ${p.negative} neg</span>
+                </div>
+              </div>
+              <button class="btn-view">View Reviews →</button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function filterProducts(filter, btn) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderProducts(filter);
+    }
+
+    function updateHeroStats() {
+      const allReviews = window.AppData.Storage.getReviews();
+      let total = 0, pos = 0;
+      Object.values(allReviews).forEach(arr => {
+        total += arr.length;
+        pos += arr.filter(r => r.sentiment === 'positive').length;
+      });
+      document.getElementById('stat-reviews').textContent = total;
+      document.getElementById('stat-positive').textContent = total > 0 ? Math.round(pos/total*100) + '%' : '0%';
+    }
+
+    function updateNav() {
+      const user = window.AppData.Storage.getUser();
+      const btn = document.getElementById('auth-btn');
+      const navUser = document.getElementById('nav-user');
+      if (user) {
+        navUser.textContent = `Hi, ${user}`;
+        btn.textContent = 'Logout';
+      } else {
+        navUser.textContent = '';
+        btn.textContent = 'Login to Review';
+      }
+    }
+
+    function handleAuth() {
+      const user = window.AppData.Storage.getUser();
+      if (user) {
+        window.AppData.Storage.logout();
+        updateNav();
+      } else {
+        document.getElementById('modal-overlay').classList.add('active');
+        document.getElementById('login-input').focus();
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('modal-overlay').classList.remove('active');
+    }
+
+    function doLogin() {
+      const val = document.getElementById('login-input').value.trim();
+      if (!val) return;
+      window.AppData.Storage.setUser(val);
+      closeModal();
+      updateNav();
+    }
+
+    document.getElementById('login-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') doLogin();
+    });
+
+    // Init
+    renderProducts('all');
+    updateHeroStats();
+    updateNav();
+  </script>
+</body>
+</html>

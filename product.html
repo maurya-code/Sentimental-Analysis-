@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product — SentiAna</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/product.css">
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="nav-brand">
+      <a href="../index.html" class="nav-back">← Back</a>
+      <span class="brand-dot"></span>
+      SentiAna
+    </div>
+    <div class="nav-right">
+      <span class="nav-user" id="nav-user"></span>
+      <button class="btn-ghost" id="auth-btn" onclick="handleAuth()"></button>
+    </div>
+  </nav>
+
+  <!-- PRODUCT HERO -->
+  <section class="product-hero" id="product-hero">
+    <div class="product-hero-img">
+      <img id="product-img" src="" alt="">
+    </div>
+    <div class="product-hero-info">
+      <div class="product-category" id="product-category"></div>
+      <h1 id="product-name"></h1>
+      <p id="product-desc"></p>
+      <div class="product-specs" id="product-specs"></div>
+      <div class="product-score-panel" id="score-panel">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- SENTIMENT DEMO — LIVE TESTER -->
+  <section class="live-tester">
+    <div class="tester-header">
+      <h2>⚡ Live Sentiment Tester</h2>
+      <p>Type anything to see the VADER algorithm score it in real time</p>
+    </div>
+    <div class="tester-body">
+      <textarea id="live-text" placeholder="Type a sentence to analyse..." oninput="liveAnalyze(this.value)"></textarea>
+      <div class="live-result" id="live-result">
+        <div class="live-emoji">🤔</div>
+        <div class="live-label">Awaiting input...</div>
+        <div class="live-score" id="live-score-display"></div>
+        <div class="live-bar-wrap">
+          <div class="live-bar" id="live-bar"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REVIEWS SECTION -->
+  <section class="reviews-section">
+    <div class="reviews-header">
+      <h2>Reviews <span id="review-count-label"></span></h2>
+      <div class="reviews-sort">
+        <button class="filter-btn active" onclick="sortReviews('all', this)">All</button>
+        <button class="filter-btn" onclick="sortReviews('positive', this)">😊 Positive</button>
+        <button class="filter-btn" onclick="sortReviews('negative', this)">😞 Negative</button>
+        <button class="filter-btn" onclick="sortReviews('neutral', this)">😐 Neutral</button>
+      </div>
+    </div>
+    <div class="reviews-list" id="reviews-list">
+      <!-- Rendered by JS -->
+    </div>
+  </section>
+
+  <!-- SUBMIT REVIEW -->
+  <section class="submit-section" id="submit-section">
+    <div class="submit-wrap">
+      <h2>Write a Review</h2>
+      <p id="submit-hint">Share your experience with this product</p>
+      <div id="submit-form-area">
+        <!-- Rendered based on login state -->
+      </div>
+    </div>
+  </section>
+
+  <!-- LOGIN MODAL -->
+  <div class="modal-overlay" id="modal-overlay" onclick="closeModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <h2>Enter your name</h2>
+      <p>No password needed — just enter your name to leave reviews.</p>
+      <input type="text" id="login-input" class="modal-input" placeholder="Your name..." maxlength="30">
+      <button class="btn-primary" onclick="doLogin()">Continue →</button>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div>SentiAna · Sentiment Analysis Project</div>
+    <div class="footer-sub">Built with Python · Django · VADER NLP · JavaScript</div>
+  </footer>
+
+  <script src="../js/sentiment-engine.js"></script>
+  <script src="../js/app.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const productId = params.get('id');
+    let currentSort = 'all';
+    let product = null;
+
+    function init() {
+      product = window.AppData.PRODUCTS.find(p => p.id === productId);
+      if (!product) { window.location = '../index.html'; return; }
+
+      document.title = `${product.name} — SentiAna`;
+      document.getElementById('product-img').src = product.image;
+      document.getElementById('product-img').alt = product.name;
+      document.getElementById('product-name').textContent = product.name;
+      document.getElementById('product-desc').textContent = product.description;
+      document.getElementById('product-category').textContent = product.category;
+      document.getElementById('product-specs').innerHTML = product.specs.map(s =>
+        `<span class="spec-tag">${s}</span>`).join('');
+
+      renderScorePanel();
+      renderReviews('all');
+      renderSubmitArea();
+      updateNav();
+    }
+
+    function renderScorePanel() {
+      const reviews = window.AppData.Storage.getReviewsForProduct(productId);
+      const stats = window.SentimentEngine.computeProductScore(reviews);
+      const pct = reviews.length > 0 ? Math.round(stats.positive / reviews.length * 100) : 0;
+      const scoreClass = stats.score > 0 ? 'pos' : stats.score < 0 ? 'neg' : 'neu';
+      const prefix = stats.score > 0 ? '+' : '';
+
+      document.getElementById('score-panel').innerHTML = `
+        <div class="score-grid">
+          <div class="score-block">
+            <span class="big-score ${scoreClass}">${prefix}${stats.score}</span>
+            <label>Net Score</label>
+          </div>
+          <div class="score-block">
+            <span class="big-score">${reviews.length}</span>
+            <label>Total Reviews</label>
+          </div>
+          <div class="score-block">
+            <span class="big-score pos">${pct}%</span>
+            <label>Satisfaction</label>
+          </div>
+        </div>
+        <div class="sentiment-bar">
+          <div class="bar-pos" style="width:${reviews.length > 0 ? stats.positive/reviews.length*100 : 0}%" title="Positive: ${stats.positive}"></div>
+          <div class="bar-neu" style="width:${reviews.length > 0 ? stats.neutral/reviews.length*100 : 0}%" title="Neutral: ${stats.neutral}"></div>
+          <div class="bar-neg" style="width:${reviews.length > 0 ? stats.negative/reviews.length*100 : 0}%" title="Negative: ${stats.negative}"></div>
+        </div>
+        <div class="bar-legend">
+          <span class="pos">● ${stats.positive} Positive</span>
+          <span class="neu">● ${stats.neutral} Neutral</span>
+          <span class="neg">● ${stats.negative} Negative</span>
+        </div>`;
+    }
+
+    function renderReviews(filter) {
+      const list = document.getElementById('reviews-list');
+      let reviews = window.AppData.Storage.getReviewsForProduct(productId);
+      if (filter !== 'all') reviews = reviews.filter(r => r.sentiment === filter);
+
+      document.getElementById('review-count-label').textContent = `(${reviews.length})`;
+
+      if (reviews.length === 0) {
+        list.innerHTML = `<div class="no-reviews">No ${filter === 'all' ? '' : filter} reviews yet. Be the first!</div>`;
+        return;
+      }
+
+      list.innerHTML = [...reviews].reverse().map(r => {
+        const icon = r.sentiment === 'positive' ? '😊' : r.sentiment === 'negative' ? '😞' : '😐';
+        const cls = r.sentiment;
+        const score = typeof r.compound === 'number' ? r.compound.toFixed(3) : '?';
+        return `
+          <div class="review-card ${cls}-card">
+            <div class="review-top">
+              <div class="review-author">
+                <span class="review-avatar">${r.author[0].toUpperCase()}</span>
+                <div>
+                  <strong>${r.author}</strong>
+                  <small>${r.date}</small>
+                </div>
+              </div>
+              <div class="review-sentiment-badge ${cls}">
+                ${icon} ${r.sentiment.charAt(0).toUpperCase() + r.sentiment.slice(1)}
+                <code>${score > 0 && cls === 'positive' ? '+' : ''}${score}</code>
+              </div>
+            </div>
+            <p class="review-text">"${r.text}"</p>
+          </div>`;
+      }).join('');
+    }
+
+    function sortReviews(filter, btn) {
+      currentSort = filter;
+      document.querySelectorAll('.reviews-sort .filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderReviews(filter);
+    }
+
+    function renderSubmitArea() {
+      const user = window.AppData.Storage.getUser();
+      const area = document.getElementById('submit-form-area');
+      if (user) {
+        area.innerHTML = `
+          <div class="review-preview" id="review-preview" style="display:none">
+            <div class="preview-emoji" id="preview-emoji">🤔</div>
+            <div class="preview-text" id="preview-text">Start typing to see sentiment...</div>
+          </div>
+          <textarea id="review-input" class="review-textarea" placeholder="Write your review here..." 
+            oninput="previewSentiment(this.value)" maxlength="500"></textarea>
+          <div class="submit-row">
+            <span class="char-count" id="char-count">0 / 500</span>
+            <button class="btn-primary" onclick="submitReview()">Submit Review →</button>
+          </div>`;
+      } else {
+        area.innerHTML = `
+          <div class="login-prompt">
+            <p>You need to log in to write a review.</p>
+            <button class="btn-primary" onclick="openModal()">Login to Review →</button>
+          </div>`;
+      }
+    }
+
+    function previewSentiment(text) {
+      const count = document.getElementById('char-count');
+      if (count) count.textContent = `${text.length} / 500`;
+
+      const preview = document.getElementById('review-preview');
+      const emoji = document.getElementById('preview-emoji');
+      const label = document.getElementById('preview-text');
+      if (!preview) return;
+
+      if (text.trim().length < 3) {
+        preview.style.display = 'none';
+        return;
+      }
+      preview.style.display = 'flex';
+      const result = window.SentimentEngine.analyzeSentiment(text);
+      const prefix = result.compound > 0 ? '+' : '';
+      emoji.textContent = result.emoji;
+      label.innerHTML = `<strong class="${result.label}">${result.label.toUpperCase()}</strong> · compound: <code>${prefix}${result.compound}</code>`;
+    }
+
+    function liveAnalyze(text) {
+      const emoji = document.querySelector('.live-emoji');
+      const label = document.querySelector('.live-label');
+      const scoreDisplay = document.getElementById('live-score-display');
+      const bar = document.getElementById('live-bar');
+
+      if (!text.trim()) {
+        emoji.textContent = '🤔';
+        label.textContent = 'Awaiting input...';
+        scoreDisplay.textContent = '';
+        bar.style.width = '50%';
+        bar.style.background = 'var(--neu)';
+        return;
+      }
+
+      const r = window.SentimentEngine.analyzeSentiment(text);
+      emoji.textContent = r.emoji;
+      const prefix = r.compound > 0 ? '+' : '';
+      label.innerHTML = `<strong class="${r.label}">${r.label.toUpperCase()}</strong>`;
+      scoreDisplay.innerHTML = `compound: <code>${prefix}${r.compound}</code>`;
+
+      const barPct = ((r.compound + 1) / 2) * 100;
+      bar.style.width = barPct + '%';
+      bar.style.background = r.label === 'positive' ? 'var(--pos)' :
+                              r.label === 'negative' ? 'var(--neg)' : 'var(--neu)';
+    }
+
+    function submitReview() {
+      const input = document.getElementById('review-input');
+      const text = input.value.trim();
+      if (!text || text.length < 5) {
+        input.classList.add('shake');
+        setTimeout(() => input.classList.remove('shake'), 500);
+        return;
+      }
+      const user = window.AppData.Storage.getUser();
+      const result = window.SentimentEngine.analyzeSentiment(text);
+      const review = {
+        id: 'r' + Date.now(),
+        author: user,
+        text,
+        sentiment: result.label,
+        compound: result.compound,
+        date: new Date().toISOString().split('T')[0]
+      };
+      window.AppData.Storage.addReview(productId, review);
+      input.value = '';
+      document.getElementById('char-count').textContent = '0 / 500';
+      document.getElementById('review-preview').style.display = 'none';
+      renderReviews(currentSort);
+      renderScorePanel();
+
+      // Flash success
+      const btn = document.querySelector('.submit-section .btn-primary');
+      const orig = btn.textContent;
+      btn.textContent = '✓ Review Added!';
+      btn.style.background = 'var(--pos)';
+      setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 2000);
+    }
+
+    function handleAuth() {
+      const user = window.AppData.Storage.getUser();
+      if (user) {
+        window.AppData.Storage.logout();
+        updateNav();
+        renderSubmitArea();
+      } else {
+        openModal();
+      }
+    }
+
+    function openModal() {
+      document.getElementById('modal-overlay').classList.add('active');
+      setTimeout(() => document.getElementById('login-input').focus(), 100);
+    }
+
+    function closeModal() {
+      document.getElementById('modal-overlay').classList.remove('active');
+    }
+
+    function doLogin() {
+      const val = document.getElementById('login-input').value.trim();
+      if (!val) return;
+      window.AppData.Storage.setUser(val);
+      closeModal();
+      updateNav();
+      renderSubmitArea();
+    }
+
+    function updateNav() {
+      const user = window.AppData.Storage.getUser();
+      const btn = document.getElementById('auth-btn');
+      const navUser = document.getElementById('nav-user');
+      if (user) {
+        navUser.textContent = `Hi, ${user}`;
+        btn.textContent = 'Logout';
+      } else {
+        navUser.textContent = '';
+        btn.textContent = 'Login to Review';
+      }
+    }
+
+    document.getElementById('login-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') doLogin();
+    });
+
+    init();
+  </script>
+</body>
+</html>
