@@ -82,5 +82,11 @@ Built as a final year project using Python, Django, and the vaderSentiment libra
 
 
 ---
+##  screens
+
+Landing page
+ ![Main](https://github.com/maurya-code/Sentimental-Analysis-/blob/main/css/1.png) Reviews
+ ![Reviews](https://github.com/maurya-code/Sentimental-Analysis-/blob/main/css/2.png)Reviews
+ ![Reviews](https://github.com/maurya-code/Sentimental-Analysis-/blob/main/css/3.png)
 
 
